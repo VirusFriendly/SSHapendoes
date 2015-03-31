@@ -90,7 +90,7 @@ auth       requisite    pam_catchall.so
 # Standard Un*x authentication.
 @include common-auth
 ```
-*Red flag warnings all over the place here. Be sure you know what you're doing before proceeding further. Don't be mad at me if you kill your box...or worse*
+**Red flag warnings all over the place here. Be sure you know what you're doing before proceeding further. Don't be mad at me if you kill your box...or worse**
 
 Lastly, most attackers target the root account. To get the passwords for these attacks, you need to first disable the root password. Then edit /etc/ssh/sshd_config and enable Root Login
 
