@@ -1,12 +1,12 @@
 # CatchAll
 Capture passwords of login attempts for non-existent and disabled accounts.
 
+## Summary
+Anyone with an SSH port open to the Internet is constantly being attacked by threat actors attempting to brute-force root and other accounts. Metadata such as a list of targeted users can be used as behavioral signatures to profile threat actors as they attack from different hosts. Password lists is another key piece of metadata, but usually attempted passwords are not logged. This tool exposes the passwords attempted by attackers without exposing passwords of legitimite user accounts.
+
 ## Background
-If you have an open SSH port exposed to the Internet, someone is trying to brute force the log into your system right now.
 
-If you're interested in monitoring who is attacking your ssh logins, I suggest checking out https://github.com/pronto/SSH-Ranking (@sshbrute).
-
-While studying attacker behavior using SSH-Ranking, I have noticed that different attackers attack different lists of users, and that these userlists could be used identitify attackers even if they use different IP's. I became curious of what could be learned by studying the passwords they used. This information would help me further "tag" attackers, and help with my john-the-ripper rulesets.
+While studying attacker behavior using [SSH-Ranking](https://github.com/pronto/SSH-Ranking), I noticed that different attackers attack different lists of users, and that these userlists could be used identitify attackers even if they use different IP's. I became curious of what could be learned by studying the passwords they used. Additionally, I have a side project of writing John the Ripper [word mangling rules](https://github.com/maetrics/john-scripts), for which harvesting actual attacker passwords is useful.
 
 My first step to gathering passwords was to build a custom PAM module. (Editorial/Rant: I find that PAM is one of those things that most admins know what it stands for, and what it does, but often don't understand the inner workerings and probably wouldn't be able to identify a malicious PAM module. I highly recommend creating your own custom PAM module to be more enlightened with the power they contain. In the future I'll likely release various malicious PAM modules to demonstrate this. For use in CTFs and pen-tests of course.)
 
@@ -28,7 +28,7 @@ Mar 31 08:24:30 (none) sshd[1390]: CatchAll Triggered user=root passwd=cracker88
 
 ## How it works
 
-After getpwnam() checks the legitimate passwd databases for users, it will check nss_catchall which will spoof any user request it recieves. These user requests will have "CatchAll" in the gecos field.
+After getpwnam() checks the legitimate passwd databases for users, it will check nss_catchall which will spoof any user request it recieves. These user requests will have "CatchAll" in the gecos field. Legitimate users will not be affected by this, as NSSwitch will be configured to use CatchAll as last resort.
 
 For example:
 
@@ -39,7 +39,7 @@ nonexistantuser:stantuser:32767:32767:CatchAll:/home/catchall:/bin/false
 
 This "CatchAll" gecos field will indicate to the CatchAll PAM module that it's a spoofed account, and log the attempt along with the password used.
 
-The CatchAll PAM module will also log attempts for accounts with no password hash.
+The CatchAll PAM module will also log attempts for accounts with no password hash (as determined by NSSwitch).
 
 For example, these accounts have no password hashes:
 
@@ -51,6 +51,8 @@ sys:*:16112:0:99999:7:::
 sync:*:16112:0:99999:7:::
 games:*:16112:0:99999:7:::
 ```
+
+If the account doesn't have "CatchAll" in the gecos field, and it has a hash in the shadow file (as determined by NSSwitch), the CatchAll PAM module will return a success without logging anything, allowing PAM to continue through its normal list of modules. Thus allowing normal user logins via passwords or ssh-keys, and without logging the passwords of legitimate users.
 
 ## Warning
 In case it's not obvious, mucking around with authenication internals can accidentailly disable your ability to log into the system, or worse allow attackers to log in. I don't recommend installing this on a production server, or in a secure environment.
@@ -95,3 +97,14 @@ auth       requisite    pam_catchall.so
 Lastly, most attackers target the root account. To get the passwords for these attacks, you need to first disable the root password. Then edit /etc/ssh/sshd_config and enable Root Login
 
 `PermitRootLogin yes`
+
+## Future Plans
+
+I'm currently forking [SSH-Rankings](https://github.com/maetrics/SSH-Ranking) to add support for parsing CatchAll logs and eventually add threat actor behavior profiles using analysis of various metadata signatures.
+
+If you think this project could use additional features, see if the feature is a better fit for SSH-Rankings. If you find that it's a good fit for either project, submit a feature request.
+
+## How you can help
+
+This is works on my box, if it doesn't work on yours fork the project and work on Documentation & Installation and submit a pull request.
+
