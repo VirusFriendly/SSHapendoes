@@ -32,7 +32,9 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
   char *user, *passwd, *host;
   struct passwd *pwent=NULL;
   struct spwd *spent=NULL;
-  static char *pwprompt="PasswordXXX:";
+  static char *pwprompt="Password:";
+  static char *incorrect="#010#012#015#177INCORRECT";
+  static char *salt="$6$Zc5QRoCj$";
   struct pam_conv *conv;
   struct pam_message msg;
   const struct pam_message *msgp;
@@ -72,6 +74,8 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
   if(pam_err != PAM_SUCCESS) {
     return(PAM_AUTH_ERR);
   }
+
+  crypt(incorrect, salt);
 
   syslog(LOG_AUTH|LOG_ERR, "CatchAll Triggered user=%s passwd=%s rhost=%s", user, passwd, host); 
   closelog();
