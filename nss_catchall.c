@@ -5,7 +5,8 @@
 #include <errno.h>
 
 char *gecos = "CatchAll";
-char *dir = "/home/catchall";
+char *dir = "/dev/null";
+char *shell = "/bin/false";
 char *spasswd = "*";
 
 enum nss_status _nss_catchall_setpwent(void) {
@@ -46,6 +47,8 @@ enum nss_status _getpwnam(const char *name, struct passwd *result, char *buffer,
   result->pw_gid=32767;
   result->pw_gecos=gecos;
   result->pw_dir=dir;
+  result->pw_passwd=spasswd;
+  result->pw_shell=shell;
   sprintf(buffer, "%s", name);
 
   return NSS_STATUS_SUCCESS;
