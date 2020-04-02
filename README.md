@@ -1,7 +1,8 @@
-# CatchAll
-Capture passwords of login attempts for non-existent and disabled accounts.
+![SSHapendoes' Logo](https://github.com/VirusFriendly/SSHapendoes/blob/master/assets/SSHapendoes-logo.png)
+### Capture passwords of login attempts for non-existent and disabled accounts.
 
-## Summary
+SSHapendoes turns any Linux host with an SSH port into a medium-interaction honeypot, by spoofing the existence of Canary Accounts in a similar manner to AD Honey Accounts.
+
 Anyone with an SSH port open to the Internet is constantly being attacked by threat actors attempting to brute-force root and other accounts. Metadata such as a list of targeted users can be used as behavioral signatures to profile threat actors as they attack from different hosts. Password lists is another key piece of metadata, but usually attempted passwords are not logged. This tool exposes the passwords attempted by attackers without exposing passwords of legitimite user accounts.
 
 ## Background
@@ -15,31 +16,31 @@ However, even with a custom PAM module, OpenSSH don't send passwords to PAM for 
 The result:
 
 ```
-Mar 31 08:24:02 (none) sshd[1382]: CatchAll Triggered user=root passwd=tslinux rhost=115.230.127.61
-Mar 31 08:24:02 (none) sshd[1382]: CatchAll Triggered user=root passwd=kodiak rhost=115.230.127.61
-Mar 31 08:24:09 (none) sshd[1386]: CatchAll Triggered user=root passwd=PASSW0RD rhost=115.230.127.61
-Mar 31 08:24:10 (none) sshd[1386]: CatchAll Triggered user=root passwd=qwerty15 rhost=115.230.127.61
-Mar 31 08:24:10 (none) sshd[1386]: CatchAll Triggered user=root passwd=k4hvdq9tj9 rhost=115.230.127.61
-Mar 31 08:24:21 (none) sshd[1388]: CatchAll Triggered user=root passwd=itadmin rhost=115.230.127.61
-Mar 31 08:24:21 (none) sshd[1388]: CatchAll Triggered user=root passwd=picasso rhost=115.230.127.61
-Mar 31 08:24:21 (none) sshd[1388]: CatchAll Triggered user=root passwd=needhouse rhost=115.230.127.61
-Mar 31 08:24:30 (none) sshd[1390]: CatchAll Triggered user=root passwd=cracker88 rhost=115.230.127.61
+Mar 31 08:24:02 (none) sshd[1382]: SSHapendoes Triggered user=root passwd=tslinux rhost=115.230.127.61
+Mar 31 08:24:02 (none) sshd[1382]: SSHapendoes Triggered user=root passwd=kodiak rhost=115.230.127.61
+Mar 31 08:24:09 (none) sshd[1386]: SSHapendoes Triggered user=root passwd=PASSW0RD rhost=115.230.127.61
+Mar 31 08:24:10 (none) sshd[1386]: SSHapendoes Triggered user=root passwd=qwerty15 rhost=115.230.127.61
+Mar 31 08:24:10 (none) sshd[1386]: SSHapendoes Triggered user=root passwd=k4hvdq9tj9 rhost=115.230.127.61
+Mar 31 08:24:21 (none) sshd[1388]: SSHapendoes Triggered user=root passwd=itadmin rhost=115.230.127.61
+Mar 31 08:24:21 (none) sshd[1388]: SSHapendoes Triggered user=root passwd=picasso rhost=115.230.127.61
+Mar 31 08:24:21 (none) sshd[1388]: SSHapendoes Triggered user=root passwd=needhouse rhost=115.230.127.61
+Mar 31 08:24:30 (none) sshd[1390]: SSHapendoes Triggered user=root passwd=cracker88 rhost=115.230.127.61
 ```
 
 ## How it works
 
-After getpwnam() checks the legitimate passwd databases for users, it will check nss_catchall which will spoof any user request it recieves. These user requests will have "CatchAll" in the gecos field. Legitimate users will not be affected by this, as NSSwitch will be configured to use CatchAll as last resort.
+After getpwnam() checks the legitimate passwd databases for users, it will check nss_canary which will spoof any user request it recieves. These user requests will have "CANARY" in the gecos field. Legitimate users will not be affected by this, as NSSwitch will be configured to use CANARY as last resort.
 
 For example:
 
 ```
 gomi@(none):~$ getent passwd nonexistantuser
-nonexistantuser:stantuser:32767:32767:CatchAll:/home/catchall:/bin/false
+nonexistantuser:stantuser:32767:32767:CANARY:/home/SSHapendoes:/bin/false
 ```
 
-This "CatchAll" gecos field will indicate to the CatchAll PAM module that it's a spoofed account, and log the attempt along with the password used.
+This "CANARY" gecos field will indicate to the SSHapendoes PAM module that it's a spoofed account, and log the attempt along with the password used.
 
-The CatchAll PAM module will also log attempts for accounts with no password hash (as determined by NSSwitch).
+The SSHapendoes PAM module will also log attempts for accounts with no password hash (as determined by NSSwitch).
 
 For example, these accounts have no password hashes:
 
@@ -52,14 +53,23 @@ sync:*:16112:0:99999:7:::
 games:*:16112:0:99999:7:::
 ```
 
-If the account doesn't have "CatchAll" in the gecos field, and it has a hash in the shadow file (as determined by NSSwitch), the CatchAll PAM module will return a success without logging anything, allowing PAM to continue through its normal list of modules. Thus allowing normal user logins via passwords or ssh-keys, and without logging the passwords of legitimate users.
+If the account doesn't have "CANARY" in the gecos field, and it has a hash in the shadow file (as determined by NSSwitch), the SSHapendoes PAM module will return a success without logging anything, allowing PAM to continue through its normal list of modules. Thus allowing normal user logins via passwords or ssh-keys, and without logging the passwords of legitimate users.
 
 ## Warning
 In case it's not obvious, mucking around with authenication internals can accidentailly disable your ability to log into the system, or worse allow attackers to log in. I don't recommend installing this on a production server, or in a secure environment.
 
-## Installation
-At this stage of the project it's a "works on my system" support. If your system isn't my system, and it shouldn't be, then installation may be different for you. If you're the clever type and can help with making this project more portable, feel free send a pull request.
+## OS Support
+At this stage of the project it's a "works on my system" support. If your system isn't my system, and it shouldn't be, then installation may be different for you.
 
+I will attempt support different Linux distos and perhaps BSD/MAC.
+
+
+### How YOU can help
+If you successfully install this project, create an issue letting me know what distro and version you installed it on, and any installation instructions that differ from what I have written below.
+
+If you're the clever type and can help with making this project more portable, feel free send a pull request.
+
+## Installation
 To compile:
 
 `make`
@@ -71,12 +81,12 @@ To install, first check the Makefile to ensure that the destination directories 
 Next edit /etc/nsswitch and edit the passwd line to look like the following:
 
 ```
-passwd:         compat catchall
+passwd:         compat canary
 ```
 
-It's very important that catchall is listed last, otherwise once PAM is configured all users will be blocked.
+It's very important that canary is listed last, otherwise once PAM is configured all users will be blocked.
 
-Next edit /etc/pam.d/sshd to look something like this, making sure that pam_catchall.so proceeds the auctual authentication lines, but comes after the required modules.
+Next edit /etc/pam.d/sshd to look something like this, making sure that pam_canary.so proceeds the auctual authentication lines, but comes after the required modules.
 
 ```
 # PAM configuration for the Secure Shell service
@@ -87,13 +97,13 @@ auth       required     pam_env.so # [1]
 # In Debian 4.0 (etch), locale-related environment variables were moved to
 # /etc/default/locale, so read that as well.
 auth       required     pam_env.so envfile=/etc/default/locale
-auth       requisite    pam_catchall.so
+auth       requisite    pam_canary.so
 
 # Standard Un*x authentication.
 @include common-auth
 ```
 
-Also, if you don't want CatchAll to resolve the attacker's IP. Edit your sshd.conf and set `UseDNS no`.
+Also, if you don't want SSHapendoes to resolve the attacker's IP. Edit your sshd.conf and set `UseDNS no`.
 
 **Red flag warnings all over the place here. Be sure you know what you're doing before proceeding further. Don't be mad at me if you kill your box...or worse**
 
@@ -103,11 +113,6 @@ Lastly, most attackers target the root account. To get the passwords for these a
 
 ## Future Plans
 
-I'm currently forking [SSH-Rankings](https://github.com/maetrics/SSH-Ranking) to add support for parsing CatchAll logs and eventually add threat actor behavior profiles using analysis of various metadata signatures.
+I'm currently forking [SSH-Rankings](https://github.com/maetrics/SSH-Ranking) to add support for parsing SSHapendoes logs and eventually add threat actor behavior profiles using analysis of various metadata signatures.
 
 If you think this project could use additional features, see if the feature is a better fit for SSH-Rankings. If you find that it's a good fit for either project, submit a feature request.
-
-## How you can help
-
-This is works on my box, if it doesn't work on yours fork the project and work on Documentation & Installation and submit a pull request.
-

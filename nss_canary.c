@@ -4,33 +4,33 @@
 #include <shadow.h>
 #include <errno.h>
 
-char *gecos = "CatchAll";
-char *dir = "/dev/null";
+char *gecos = "CANARY";
+char *dir = "/home/SSHapendoes";
 char *shell = "/bin/false";
 char *spasswd = "*";
 
-enum nss_status _nss_catchall_setpwent(void) {
+enum nss_status _nss_canary_setpwent(void) {
 //  printf("@ %s\n", __FUNCTION__) ;
   return NSS_STATUS_SUCCESS;
 }
 
-enum nss_status _nss_catchall_endpwent(void) {
+enum nss_status _nss_canary_endpwent(void) {
 //  printf("@ %s\n", __FUNCTION__) ;
   return NSS_STATUS_SUCCESS;
 }
 
-enum nss_status _nss_catchall_getpwent_r(struct passwd *result_buf, char *buffer, size_t buflen, int *errnop) {
+enum nss_status _nss_canary_getpwent_r(struct passwd *result_buf, char *buffer, size_t buflen, int *errnop) {
 //  printf("@ %s\n", __FUNCTION__) ;
   return NSS_STATUS_NOTFOUND;
 }
 
-enum nss_status _nss_catchall_getpwnam(const char *name, struct passwd *result, char *buffer, size_t buflen, int *errnop) {
+enum nss_status _nss_canary_getpwnam(const char *name, struct passwd *result, char *buffer, size_t buflen, int *errnop) {
 //  printf("@ %s\n", __FUNCTION__);
 
   return _getpwnam(name, result, buffer, buflen, errnop);
 }
 
-enum nss_status _nss_catchall_getpwnam_r(const char *name, struct passwd *result, char *buffer, size_t buflen, int *errnop) {
+enum nss_status _nss_canary_getpwnam_r(const char *name, struct passwd *result, char *buffer, size_t buflen, int *errnop) {
 //  printf("@ %s\n", __FUNCTION__);
 
   return _getpwnam(name, result, buffer, buflen, errnop);

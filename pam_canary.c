@@ -45,7 +45,7 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
   pwent=getpwnam(user);        
   openlog(NULL, LOG_PID, LOG_AUTH);
 
-  if(strcmp(pwent->pw_gecos, "CatchAll") != 0) {
+  if(strcmp(pwent->pw_gecos, "CANARY") != 0) {
     spent=getspnam(user);
 
     if((spent == NULL) || (strcmp(spent->sp_pwdp, "*") != 0)) {
@@ -77,7 +77,7 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
 
   crypt(incorrect, salt);
 
-  syslog(LOG_AUTH|LOG_ERR, "CatchAll Triggered user=%s passwd=%s rhost=%s", user, passwd, host); 
+  syslog(LOG_AUTH|LOG_ERR, "SSHapendoes Triggered user=%s passwd=%s rhost=%s", user, passwd, host); 
   closelog();
 
   return(PAM_AUTH_ERR);
