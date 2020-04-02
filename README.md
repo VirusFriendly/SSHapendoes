@@ -116,3 +116,5 @@ Lastly, most attackers target the root account. To get the passwords for these a
 I'm currently forking [SSH-Rankings](https://github.com/maetrics/SSH-Ranking) to add support for parsing SSHapendoes logs and eventually add threat actor behavior profiles using analysis of various metadata signatures.
 
 If you think this project could use additional features, see if the feature is a better fit for SSH-Rankings. If you find that it's a good fit for either project, submit a feature request.
+
+I'm also going to look into support for other services such as Samba
