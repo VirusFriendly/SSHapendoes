@@ -4,11 +4,13 @@
 #define PAM_SM_PASSWORD
 #define PAM_SM_SESSION
 
+#include <crypt.h>
 #include <string.h>
 #include <sys/types.h>
 #include <pwd.h>
 #include <security/pam_modules.h>
 #include <security/pam_appl.h>
+#include <security/pam_ext.h>
 #include <syslog.h>
 #include <shadow.h>
 
