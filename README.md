@@ -34,8 +34,8 @@ After getpwnam() checks the legitimate passwd databases for users, it will check
 For example:
 
 ```
-gomi@(none):~$ getent passwd nonexistantuser
-nonexistantuser:stantuser:32767:32767:CANARY:/home/SSHapendoes:/bin/false
+virusfriendly@(none):~$ getent passwd nonexistantuser
+nonexistantuser:*:32767:32767:CANARY:/home/SSHapendoes:/bin/false
 ```
 
 This "CANARY" gecos field will indicate to the SSHapendoes PAM module that it's a spoofed account, and log the attempt along with the password used.
@@ -56,65 +56,153 @@ games:*:16112:0:99999:7:::
 If the account doesn't have "CANARY" in the gecos field, and it has a hash in the shadow file (as determined by NSSwitch), the SSHapendoes PAM module will return a success without logging anything, allowing PAM to continue through its normal list of modules. Thus allowing normal user logins via passwords or ssh-keys, and without logging the passwords of legitimate users.
 
 ## Warning
-In case it's not obvious, mucking around with authenication internals can accidentailly disable your ability to log into the system, or worse allow attackers to log in. I don't recommend installing this on a production server, or in a secure environment.
+**In case it's not obvious, mucking around with authenication internals can accidentailly disable your ability to log into the system, or worse allow attackers to log in. I don't recommend installing this on a production server, or in a secure environment.**
 
 ## OS Support
-At this stage of the project it's a "works on my system" support. If your system isn't my system, and it shouldn't be, then installation may be different for you.
+SSHapendoes is known to work on the following Operating Systems/Distros
 
-I will attempt support different Linux distos and perhaps BSD/MAC.
+Linux
 
+* Raspbian 10
+* Ubuntu 20
 
 ### How YOU can help
-If you successfully install this project, create an issue letting me know what distro and version you installed it on, and any installation instructions that differ from what I have written below.
+If you successfully install this project, create an issue letting me know what distro and version you installed it on and any installation notes.
 
 If you're the clever type and can help with making this project more portable, feel free send a pull request.
 
-## Installation
-To compile:
+# Installation
+## Ubuntu 20
+### Setting up the Build Environment
+`apt install build-essential libpam0g-dev`
 
+### Compiling
 `make`
 
-To install, first check the Makefile to ensure that the destination directories are correct. Then:
-
+### Installing
 `sudo make install`
 
-Next edit /etc/nsswitch and edit the passwd line to look like the following:
+### Configuration
+#### NS Switch
+Edit /etc/nsswitch and append the passwd line with canary as in the following example.
 
 ```
-passwd:         compat canary
+passwd:         files systemd canary
 ```
 
-It's very important that canary is listed last, otherwise once PAM is configured all users will be blocked.
+**It's very important that canary is listed last, otherwise once PAM is configured all users will be blocked.**
 
-Next edit /etc/pam.d/sshd to look something like this, making sure that pam_canary.so proceeds the auctual authentication lines, but comes after the required modules.
+Additionally, any install packages that check for a user's existence before creating daemon accounts (like TOR does), will fail because of this NSSwitch Configuration. You will need to temporarily disable and later renable this configuration for such installs.
+
+You can test the configuration with the following command
+
+`getent passwd nonexistantuser`
+
+which should display something like the following
+
+`nonexistantuser:*:32767:32767:CANARY:/home/SSHapendoes:/bin/false`
+
+#### SSHD PAM
+Edit /etc/pam.d/sshd and insert the following line before any other `auth` configure lines. Often this means to insert prior to the `@include common-auth` line.
+
+`auth       requisite    pam_canary.so`
+
+With NS Switch and the SSHD PAM configurations updated, SSHapendoes can be tested by SSHing into the localhost with a unknown user like so:
+
+`ssh nonexistantuser@localhost`
+
+Supply fake passwords until SSHD kicks you out, then check the auth.log as follows:
+
+`grep SSHapendoes auth.log`
+
+which should show something like the following:
+
+```
+auth.log:Aug 27 17:06:43 ubuntu20server sshd[1986]: SSHapendoes Triggered user=nonexistantuser passwd=changeme rhost=127.0.0.1
+auth.log:Aug 27 17:06:47 ubuntu20server sshd[1986]: SSHapendoes Triggered user=nonexistantuser passwd=badpasswd rhost=127.0.0.1
+auth.log:Aug 27 17:06:50 ubuntu20server sshd[1986]: SSHapendoes Triggered user=nonexistantuser passwd=letmein rhost=127.0.0.1
+```
+
+An example modified config file using the default sshd pam configuration on Ubuntu 20
 
 ```
 # PAM configuration for the Secure Shell service
 
-# Read environment variables from /etc/environment and
-# /etc/security/pam_env.conf.
-auth       required     pam_env.so # [1]
-# In Debian 4.0 (etch), locale-related environment variables were moved to
-# /etc/default/locale, so read that as well.
-auth       required     pam_env.so envfile=/etc/default/locale
 auth       requisite    pam_canary.so
 
 # Standard Un*x authentication.
 @include common-auth
+
+# Disallow non-root logins when /etc/nologin exists.
+account    required     pam_nologin.so
+
+# Uncomment and edit /etc/security/access.conf if you need to set complex
+# access limits that are hard to express in sshd_config.
+# account  required     pam_access.so
+
+# Standard Un*x authorization.
+@include common-account
+
+# SELinux needs to be the first session rule.  This ensures that any
+# lingering context has been cleared.  Without this it is possible that a
+# module could execute code in the wrong domain.
+session [success=ok ignore=ignore module_unknown=ignore default=bad]        pam_selinux.so close
+
+# Set the loginuid process attribute.
+session    required     pam_loginuid.so
+
+# Create a new session keyring.
+session    optional     pam_keyinit.so force revoke
+
+# Standard Un*x session setup and teardown.
+@include common-session
+
+# Print the message of the day upon successful login.
+# This includes a dynamically generated part from /run/motd.dynamic
+# and a static (admin-editable) part from /etc/motd.
+session    optional     pam_motd.so  motd=/run/motd.dynamic
+session    optional     pam_motd.so noupdate
+
+# Print the status of the user's mailbox upon successful login.
+session    optional     pam_mail.so standard noenv # [1]
+
+# Set up user limits from /etc/security/limits.conf.
+session    required     pam_limits.so
+
+# Read environment variables from /etc/environment and
+# /etc/security/pam_env.conf.
+session    required     pam_env.so # [1]
+# In Debian 4.0 (etch), locale-related environment variables were moved to
+# /etc/default/locale, so read that as well.
+session    required     pam_env.so user_readenv=1 envfile=/etc/default/locale
+
+# SELinux needs to intervene at login time to ensure that the process starts
+# in the proper default security context.  Only sessions which are intended
+# to run in the user's context should be run after this.
+session [success=ok ignore=ignore module_unknown=ignore default=bad]        pam_selinux.so open
+
+# Standard Un*x password updating.
+@include common-password
 ```
 
-Also, if you don't want SSHapendoes to resolve the attacker's IP. Edit your sshd.conf and set `UseDNS no`.
+#### SSHD (Optional)
+
+Edit /etc/ssh/sshd_config
+
+If you don't want SSHapendoes/SSHD to resolve the attacker's IP. Set `UseDNS no`.
 
 **Red flag warnings all over the place here. Be sure you know what you're doing before proceeding further. Don't be mad at me if you kill your box...or worse**
 
-Lastly, most attackers target the root account. To get the passwords for these attacks, you need to first disable the root password. Then edit /etc/ssh/sshd_config and enable Root Login
+Most attackers target the root account. To collect the passwords for these attacks, you need to first disable the root password. This is the default configuation on Ubuntu systems, but it is best to double check.
+
+Then enable Root Login in the SSHD Config as follows.
 
 `PermitRootLogin yes`
 
-## Future Plans
+# Future Plans
 
-I'm currently forking [SSH-Rankings](https://github.com/maetrics/SSH-Ranking) to add support for parsing SSHapendoes logs and eventually add threat actor behavior profiles using analysis of various metadata signatures.
+* SSHapendoes Docker Images
+* Including other services, like Samba
+* Adding SSHapendoes support in [SSH-Rankings](https://github.com/pronto/SSH-Ranking)
 
-If you think this project could use additional features, see if the feature is a better fit for SSH-Rankings. If you find that it's a good fit for either project, submit a feature request.
-
-I'm also going to look into support for other services such as Samba
+If you think this project could use additional features, please submit a feature request.
